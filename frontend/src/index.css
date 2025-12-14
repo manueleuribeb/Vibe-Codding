@@ -46,3 +46,20 @@ input, select{
 .row{display:flex;gap:12px;align-items:center}
 
 .muted{color:var(--muted)}
+
+.error-message{
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.summary-table, .series-table{
+  width: 100%;
+  border-collapse: collapse;
+}
+.summary-table th{ text-align: left; padding: 6px 8px; width: 160px; color: var(--muted) }
+.summary-table td{ padding: 6px 8px; }
+.series-table th, .series-table td{ border-bottom: 1px solid #eef2f7; padding: 6px 8px; text-align: left }
+

@@ -23,9 +23,13 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
     } else if (symbol) params.set('symbol', symbol)
     if (method !== 'auto') params.set('method', method)
     params.set('horizon', String(horizon))
-    const res = await fetch('/api/online?' + params.toString())
+    const res = await fetch(`/api/online?${params.toString()}`)
     const data = await res.json()
-    onResult(data)
+    if (!res.ok) {
+      onResult({ error: data?.detail ?? data?.error ?? JSON.stringify(data) })
+    } else {
+      onResult(data)
+    }
     setLoading(false)
   }
 

@@ -16,9 +16,17 @@ export default function UploadData({ onResult }: { onResult: (r: Result) => void
     fd.append('file', file)
     fd.append('horizon', String(horizon))
     if (method !== 'auto') fd.append('method', method)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
-    onResult(data)
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) {
+        onResult({ error: data?.detail ?? data?.error ?? JSON.stringify(data) })
+      } else {
+        onResult(data)
+      }
+    } catch (err: any) {
+      onResult({ error: err?.message ?? String(err) })
+    }
     setLoading(false)
   }
 

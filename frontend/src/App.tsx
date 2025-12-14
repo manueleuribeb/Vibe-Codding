@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import UploadData from './components/UploadData'
 import OnlineDataForm from './components/OnlineDataForm'
 import ForecastChart from './components/ForecastChart'
+import ResultsTable from './components/ResultsTable'
 import { useForecastData } from './hooks/useForecastData'
 
 export default function App() {
@@ -25,12 +26,25 @@ export default function App() {
 
       <div>
         <h3>Result</h3>
-        <pre style={{ background: '#f6f8fa', padding: 12 }}>{result ? JSON.stringify(result, null, 2) : 'No result yet'}</pre>
+        <ResultsTable result={result} />
       </div>
 
       <div>
         <h3>Prepared chart data (for Recharts)</h3>
-        <pre style={{ background: '#fff', padding: 12 }}>{JSON.stringify(series, null, 2)}</pre>
+        {series.length === 0 ? (
+          <div className="muted">No prepared chart data</div>
+        ) : (
+          <table className="series-table" style={{ background: '#fff', padding: 12 }}>
+            <thead>
+              <tr><th>Date</th><th>Forecast</th></tr>
+            </thead>
+            <tbody>
+              {series.map((r: any, i: number) => (
+                <tr key={i}><td>{r.date}</td><td>{typeof r.forecast === 'number' ? r.forecast.toFixed(4) : r.forecast}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div style={{ marginTop: 16 }}>
