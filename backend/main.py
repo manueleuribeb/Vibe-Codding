@@ -1,4 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Form
+from dotenv import load_dotenv
+
+# Load environment variables from .env (if present) for development convenience
+load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 import yfinance as yf
 import pandas as pd

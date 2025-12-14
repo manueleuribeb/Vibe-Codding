@@ -31,11 +31,20 @@ Installation
 EIA API token
 
 - To use `source=eia` with `/api/online`, get a free API key from the U.S. Energy Information Administration (EIA): https://www.eia.gov/opendata/register.php
-- Set the key in your environment before running the backend:
+- Set the key in your environment before running the backend (quick):
 
-	```bash
-	export EIA_API_KEY=your_api_key_here
-	```
+  ```bash
+  EIA_API_KEY="your_api_key_here" uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+  ```
+
+- Or create a `.env` file in the project root with your key (development):
+
+  ```bash
+  # .env
+  EIA_API_KEY=your_api_key_here
+  ```
+
+  The backend will automatically load `.env` when starting in development.
 
 Running tests
 
