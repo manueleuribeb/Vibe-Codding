@@ -102,6 +102,28 @@ Notes on EIA
 curl "http://127.0.0.1:8000/api/online?source=eia&symbol=PET.RWTC.D"
 ```
 
+Quick troubleshooting if EIA returns an error
+
+- If the UI shows "series_id y token EIA son requeridos" or a similar message, it usually means the backend cannot find an EIA API key in its environment.
+- Fix locally by exporting the variable or creating a `.env` file in the project root:
+
+```bash
+# export for the current session
+export EIA_API_KEY="your_api_key_here"
+
+# or create a .env file (development), then restart the backend
+echo "EIA_API_KEY=your_api_key_here" > .env
+```
+
+- In Codespaces or other cloud dev environments, add the secret (name `EIA_API_KEY`) and rebuild/restart the container so the key is injected into the environment.
+- You can also check quickly from the running backend whether a key is available with:
+
+```bash
+curl http://127.0.0.1:8000/api/eia_status
+# => {"eia_key_present": true}
+```
+
+
 LLM / llamadas a herramientas desde Python
 
 - ¿La app llama a una "tool" desde un LLM (por ejemplo OpenAI/LLM tool callbacks)? No — actualmente la aplicación no realiza llamadas a ningún modelo de lenguaje ni utiliza una capa de "tooling" de LLM. Todas las fuentes externas son APIs públicas (Yahoo via `yfinance`, EIA via su API) o datos cargados por el usuario (CSV/XLSX). Los métodos de forecasting (`naive`, `moving_average`, `ewm`) están implementados en Python puro en `backend/main.py`.

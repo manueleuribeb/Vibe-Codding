@@ -11,6 +11,7 @@ import os
 import math
 import requests
 from typing import List, Tuple, Dict
+from .data_sources import load_from_eia
 
 app = FastAPI(title="energia-forecast backend")
 
@@ -204,20 +205,16 @@ def online(source: str = Query('yahoo', pattern='^(yahoo|eia|xm)$'), symbol: str
             df = df.reset_index()[['Date', 'Close']].rename(columns={'Date': 'date', 'Close': 'price'})
         elif src == 'eia':
             series_id = symbol or 'PET.RWTC.D'
-            api_key = os.getenv('EIA_API_KEY') or 'DEMO_KEY'
-            # Use EIA API v2 seriesid endpoint (backward-compatibility path)
-            resp = requests.get(f'https://api.eia.gov/v2/seriesid/{series_id}', params={'api_key': api_key}, timeout=15)
-            data = resp.json()
-            if 'response' not in data or 'data' not in data['response'] or not data['response']['data']:
-                raise HTTPException(status_code=404, detail='No series data from EIA')
-            rows = data['response']['data']  # list of dicts with 'period' and 'value'
-            df = pd.DataFrame(rows)
-            if 'period' in df.columns and 'value' in df.columns:
-                df = df.rename(columns={'period': 'date', 'value': 'price'})
-            elif 'date' in df.columns and 'price' in df.columns:
-                pass
-            else:
-                raise HTTPException(status_code=500, detail='Unexpected EIA data format')
+            api_key = os.getenv('EIA_API_KEY') or os.getenv('EIA_TOKEN')
+            try:
+                df = load_from_eia(series_id, token=api_key)
+            except ValueError as e:
+                # data missing or unexpected format
+                raise HTTPException(status_code=404, detail=str(e))
+            except requests.HTTPError as e:
+                raise HTTPException(status_code=502, detail=str(e))
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
         elif src == 'xm':
             # xm maps to Exxon Mobil ticker XOM by default
             sym = symbol or 'XOM'
@@ -236,3 +233,14 @@ def online(source: str = Query('yahoo', pattern='^(yahoo|eia|xm)$'), symbol: str
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/eia_status')
+def eia_status():
+    """Check whether an EIA API key is available in the environment.
+
+    Returns a JSON object with `eia_key_present: true|false` so the UI
+    (or operator) can quickly detect missing tokens.
+    """
+    key = os.getenv('EIA_API_KEY') or os.getenv('EIA_TOKEN')
+    return {'eia_key_present': bool(key)}

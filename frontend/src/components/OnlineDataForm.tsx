@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 type Result = any
 
@@ -9,10 +9,16 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
   const [method, setMethod] = useState<'auto'|'naive'|'moving_average'|'ewm'>('auto')
   const [horizon, setHorizon] = useState<number>(7)
   const [loading, setLoading] = useState(false)
+  const [eiaPresent, setEiaPresent] = useState<boolean | null>(null)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    if (source === 'eia' && eiaPresent === false) {
+      onResult({ error: 'EIA API key missing in backend environment. See README for troubleshooting.' })
+      setLoading(false)
+      return
+    }
     const params = new URLSearchParams()
     params.set('source', source)
     // apply preset if selected
@@ -32,6 +38,20 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
     }
     setLoading(false)
   }
+
+  async function checkEiaStatus() {
+    try {
+      const r = await fetch('/api/eia_status')
+      const data = await r.json()
+      setEiaPresent(Boolean(data?.eia_key_present))
+    } catch (err) {
+      setEiaPresent(false)
+    }
+  }
+
+  useEffect(() => {
+    if (source === 'eia') checkEiaStatus()
+  }, [source])
 
   return (
     <form onSubmit={submit} style={{ marginBottom: 16 }}>
@@ -78,7 +98,16 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
         </label>
       </div>
       <div>
-        <button type="submit" disabled={loading}>{loading ? 'Loading...' : 'Fetch & Forecast'}</button>
+        <button type="submit" disabled={loading || eiaPresent === false}>{loading ? 'Loading...' : 'Fetch & Forecast'}</button>
+        {source === 'eia' && eiaPresent === false && (
+          <div style={{ marginTop: 8 }}>
+            <div className="error-message">Error: EIA API key missing in backend environment. Add `EIA_API_KEY` to your environment or Codespaces secrets and restart the container.</div>
+            <button type="button" onClick={checkEiaStatus} style={{ marginTop: 8 }}>Check again</button>
+          </div>
+        )}
+        {source === 'eia' && eiaPresent === null && (
+          <div className="muted" style={{ marginTop: 8 }}>Checking EIA key...</div>
+        )}
       </div>
     </form>
   )

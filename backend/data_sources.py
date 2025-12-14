@@ -1,7 +1,7 @@
 import os, pandas as pd, numpy as np, requests, yfinance as yf
 from typing import Optional
 
-EIA_DEFAULT_TOKEN = os.getenv("EIA_TOKEN", "")
+EIA_DEFAULT_TOKEN = os.getenv("EIA_API_KEY") or os.getenv("EIA_TOKEN", "")
 
 EIA_SERIES = {
     "wti_daily": "PET.RWTC.D",      # WTI spot diario (EIA)
@@ -23,11 +23,23 @@ def load_from_eia(series_id: str, token: Optional[str] = None) -> pd.DataFrame:
     # Use EIA API v2 seriesid endpoint (backwards-compatible)
     url = f"https://api.eia.gov/v2/seriesid/{series_id}"
     resp = requests.get(url, params={'api_key': token}, timeout=30)
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as e:
+        # include response content if available
+        txt = ''
+        try:
+            txt = resp.json()
+        except Exception:
+            txt = resp.text
+        raise requests.HTTPError(f"EIA HTTP error: {e} - {txt}")
+
     js = resp.json()
-    rows = js.get('response', {}).get('data', [])
+    rows = js.get('response', {}).get('data', []) or js.get('data') or js.get('series')
     if not rows:
-        raise ValueError("No data returned from EIA for series_id")
+        # try to include any error/message field from EIA response
+        err_msg = js.get('error') or js.get('message') or js
+        raise ValueError(f"No data returned from EIA for series_id: {err_msg}")
     df = pd.DataFrame(rows)
     # v2 rows typically have 'period' and 'value' keys
     if 'period' in df.columns and 'value' in df.columns:
