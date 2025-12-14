@@ -205,12 +205,19 @@ def online(source: str = Query('yahoo', pattern='^(yahoo|eia|xm)$'), symbol: str
         elif src == 'eia':
             series_id = symbol or 'PET.RWTC.D'
             api_key = os.getenv('EIA_API_KEY') or 'DEMO_KEY'
-            resp = requests.get('https://api.eia.gov/series/', params={'api_key': api_key, 'series_id': series_id}, timeout=10)
+            # Use EIA API v2 seriesid endpoint (backward-compatibility path)
+            resp = requests.get(f'https://api.eia.gov/v2/seriesid/{series_id}', params={'api_key': api_key}, timeout=15)
             data = resp.json()
-            if 'series' not in data or not data['series']:
+            if 'response' not in data or 'data' not in data['response'] or not data['response']['data']:
                 raise HTTPException(status_code=404, detail='No series data from EIA')
-            rows = data['series'][0]['data']  # list of [date, value]
-            df = pd.DataFrame(rows, columns=['date', 'price'])
+            rows = data['response']['data']  # list of dicts with 'period' and 'value'
+            df = pd.DataFrame(rows)
+            if 'period' in df.columns and 'value' in df.columns:
+                df = df.rename(columns={'period': 'date', 'value': 'price'})
+            elif 'date' in df.columns and 'price' in df.columns:
+                pass
+            else:
+                raise HTTPException(status_code=500, detail='Unexpected EIA data format')
         elif src == 'xm':
             # xm maps to Exxon Mobil ticker XOM by default
             sym = symbol or 'XOM'

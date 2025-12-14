@@ -20,12 +20,18 @@ def load_from_eia(series_id: str, token: Optional[str] = None) -> pd.DataFrame:
     if not (series_id and token):
         raise ValueError("series_id y token EIA son requeridos (o EIA_TOKEN en entorno).")
     # API v1 series endpoint
-    url = f"https://api.eia.gov/series/?api_key={token}&series_id={series_id}"
-    resp = requests.get(url, timeout=30)
+    # Use EIA API v2 seriesid endpoint (backwards-compatible)
+    url = f"https://api.eia.gov/v2/seriesid/{series_id}"
+    resp = requests.get(url, params={'api_key': token}, timeout=30)
     resp.raise_for_status()
     js = resp.json()
-    data = js["series"][0]["data"]  # [[YYYYMMDD, value], ...]
-    df = pd.DataFrame(data, columns=["date","price"])
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["price"] = pd.to_numeric(df["price"], errors="coerce")
-    return df.dropna().sort_values("date").reset_index(drop=True)
+    rows = js.get('response', {}).get('data', [])
+    if not rows:
+        raise ValueError("No data returned from EIA for series_id")
+    df = pd.DataFrame(rows)
+    # v2 rows typically have 'period' and 'value' keys
+    if 'period' in df.columns and 'value' in df.columns:
+        df = df.rename(columns={'period': 'date', 'value': 'price'})
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    df['price'] = pd.to_numeric(df['price'], errors='coerce')
+    return df.dropna().sort_values('date').reset_index(drop=True)
