@@ -2,6 +2,8 @@
 
 Energia Forecast — monorepo with a FastAPI backend and Vite + React + TypeScript frontend.
 
+Built with Vibe Codding — this demo was assembled using the Vibe Codding scaffold and development workflow.
+
 Quick start
 
 - Backend: `cd backend` && `pip install -r requirements.txt` && `uvicorn backend.main:app --reload`
@@ -61,6 +63,12 @@ UI improvements and usage
 	- A method selector (Auto/Naive/Moving average/EWMA) and a slider to choose horizon.
 	- Forecast chart using Recharts (prepared data hook in `frontend/src/hooks/useForecastData` and chart component `ForecastChart`).
 
+	- Results presentation: UI shows a concise summary table (best method, MAPE, RMSE) and a readable "Forecast series" table for the predicted dates and values.
+
+	- Prepared chart data is also displayed in a Date/Forecast table for quick inspection alongside the chart.
+
+	- Error handling: when online sources (for example EIA) return errors or incomplete data, the UI shows a clear error message in the results panel.
+
 Evidence (quick checks)
 
 - Start backend and frontend then visit `http://localhost:5173/`.
@@ -87,9 +95,32 @@ Notes on EIA
 - If using `source=eia`, ensure `EIA_API_KEY` is set; you can get one at https://www.eia.gov/opendata/register.php.
 - Example EIA call (replace `PET.RWTC.D` with another series id if needed):
 
+- If using `source=eia`, ensure `EIA_API_KEY` is set; you can get one at https://www.eia.gov/opendata/register.php. The backend uses EIA API v2 (seriesid endpoint) to fetch series data.
+- Example EIA call (replace `PET.RWTC.D` with another series id if needed):
+
 ```bash
 curl "http://127.0.0.1:8000/api/online?source=eia&symbol=PET.RWTC.D"
 ```
+
+LLM / llamadas a herramientas desde Python
+
+- ¿La app llama a una "tool" desde un LLM (por ejemplo OpenAI/LLM tool callbacks)? No — actualmente la aplicación no realiza llamadas a ningún modelo de lenguaje ni utiliza una capa de "tooling" de LLM. Todas las fuentes externas son APIs públicas (Yahoo via `yfinance`, EIA via su API) o datos cargados por el usuario (CSV/XLSX). Los métodos de forecasting (`naive`, `moving_average`, `ewm`) están implementados en Python puro en `backend/main.py`.
+
+- Si quieres integrar un LLM en el backend (por ejemplo para generar comentarios, enriquecer series o explicar resultados), hazlo en el servidor y usa variables de entorno para la clave del proveedor. Ejemplo minimal con OpenAI (pseudo-código):
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+def explain_forecast(series):
+	prompt = f"Explica brevemente este pronóstico: {series}"
+	resp = client.responses.create(model='gpt-4o-mini', input=prompt)
+	return resp.output_text
+```
+
+- Buenas prácticas: guarda claves en variables de entorno (`OPENAI_API_KEY`), no las incluyas en el repositorio, añade pruebas que mockeen las respuestas del LLM y aplica límites de uso para evitar costes inesperados.
 
 API endpoints (backend)
 
