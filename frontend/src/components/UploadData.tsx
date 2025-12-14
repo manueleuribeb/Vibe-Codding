@@ -1,10 +1,19 @@
 import React, { useState } from 'react'
 
+/**
+ * Componente `UploadData`.
+ *
+ * Permite subir un archivo CSV o XLSX con columnas `date` y `price`. Envía el
+ * archivo al endpoint `/api/upload` y pasa el resultado (o error) al
+ * callback `onResult`.
+ */
+
 type Result = any
 
 export default function UploadData({ onResult }: { onResult: (r: Result) => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [horizon, setHorizon] = useState(7)
+  const [method, setMethod] = useState<'auto'|'naive'|'moving_average'|'ewm'>('auto')
   const [loading, setLoading] = useState(false)
 
   async function submit(e: React.FormEvent) {
@@ -14,9 +23,18 @@ export default function UploadData({ onResult }: { onResult: (r: Result) => void
     const fd = new FormData()
     fd.append('file', file)
     fd.append('horizon', String(horizon))
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
-    onResult(data)
+    if (method !== 'auto') fd.append('method', method)
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) {
+        onResult({ error: data?.detail ?? data?.error ?? JSON.stringify(data) })
+      } else {
+        onResult(data)
+      }
+    } catch (err: any) {
+      onResult({ error: err?.message ?? String(err) })
+    }
     setLoading(false)
   }
 
@@ -27,9 +45,21 @@ export default function UploadData({ onResult }: { onResult: (r: Result) => void
           File: <input type="file" accept=".csv,.xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </label>
       </div>
-      <div>
+      <div style={{ marginTop: 8 }}>
         <label>
-          Horizon (days): <input type="number" value={horizon} onChange={(e) => setHorizon(Number(e.target.value))} min={1} max={365} />
+          Method:{' '}
+          <select value={method} onChange={(e) => setMethod(e.target.value as any)}>
+            <option value="auto">Auto (best)</option>
+            <option value="naive">Naive</option>
+            <option value="moving_average">Moving average</option>
+            <option value="ewm">EWMA</option>
+          </select>
+        </label>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <label>
+          Horizon (days): <input type="range" value={horizon} onChange={(e) => setHorizon(Number(e.target.value))} min={1} max={90} /> <strong>{horizon}</strong>
         </label>
       </div>
       <div>
