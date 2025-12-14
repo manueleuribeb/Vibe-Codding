@@ -5,6 +5,8 @@ type Result = any
 export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => void }) {
   const [source, setSource] = useState<'yahoo'|'eia'|'xm'>('yahoo')
   const [symbol, setSymbol] = useState<string>('')
+  const [preset, setPreset] = useState<string>('')
+  const [method, setMethod] = useState<'auto'|'naive'|'moving_average'|'ewm'>('auto')
   const [horizon, setHorizon] = useState<number>(7)
   const [loading, setLoading] = useState(false)
 
@@ -13,7 +15,13 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
     setLoading(true)
     const params = new URLSearchParams()
     params.set('source', source)
-    if (symbol) params.set('symbol', symbol)
+    // apply preset if selected
+    if (preset) {
+      if (preset === 'wti') params.set('symbol', 'CL=F')
+      if (preset === 'brent') params.set('symbol', 'BZ=F')
+      if (preset === 'henry') params.set('symbol', 'NG=F')
+    } else if (symbol) params.set('symbol', symbol)
+    if (method !== 'auto') params.set('method', method)
     params.set('horizon', String(horizon))
     const res = await fetch('/api/online?' + params.toString())
     const data = await res.json()
@@ -33,14 +41,36 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
           </select>
         </label>
       </div>
-      <div>
+
+      <div style={{ marginTop: 8 }}>
+        <label style={{ marginRight: 8 }}>Presets:</label>
+        <button type="button" onClick={() => { setPreset('wti'); setSymbol('CL=F') }} style={{ marginRight: 6 }}>WTI (CL=F)</button>
+        <button type="button" onClick={() => { setPreset('brent'); setSymbol('BZ=F') }} style={{ marginRight: 6 }}>Brent</button>
+        <button type="button" onClick={() => { setPreset('henry'); setSymbol('NG=F') }} style={{ marginRight: 6 }}>Henry Hub</button>
+        <button type="button" onClick={() => { setPreset(''); setSymbol('') }}>Clear</button>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
         <label>
-          Symbol/Series (optional): <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="CL=F or PET.RWTC.D" />
+          Symbol/Series (optional): <input value={symbol} onChange={(e) => { setSymbol(e.target.value); setPreset('') }} placeholder="CL=F or PET.RWTC.D" />
         </label>
       </div>
-      <div>
+
+      <div style={{ marginTop: 8 }}>
         <label>
-          Horizon (days): <input type="number" value={horizon} onChange={(e) => setHorizon(Number(e.target.value))} min={1} max={365} />
+          Method:{' '}
+          <select value={method} onChange={(e) => setMethod(e.target.value as any)}>
+            <option value="auto">Auto (best)</option>
+            <option value="naive">Naive</option>
+            <option value="moving_average">Moving average</option>
+            <option value="ewm">EWMA</option>
+          </select>
+        </label>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <label>
+          Horizon (days): <input type="range" value={horizon} onChange={(e) => setHorizon(Number(e.target.value))} min={1} max={90} /> <strong>{horizon}</strong>
         </label>
       </div>
       <div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import UploadData from './components/UploadData'
 import OnlineDataForm from './components/OnlineDataForm'
+import ForecastChart from './components/ForecastChart'
 import { useForecastData } from './hooks/useForecastData'
 
 export default function App() {
@@ -30,6 +31,16 @@ export default function App() {
       <div>
         <h3>Prepared chart data (for Recharts)</h3>
         <pre style={{ background: '#fff', padding: 12 }}>{JSON.stringify(series, null, 2)}</pre>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <h3>Forecast chart</h3>
+        {/* lazy load chart */}
+        {series.length > 0 ? (
+          <ForecastChart data={series} />
+        ) : (
+          <div>No forecast to display</div>
+        )}
       </div>
     </div>
   )

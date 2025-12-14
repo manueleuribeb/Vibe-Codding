@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 import yfinance as yf
 import pandas as pd
@@ -107,8 +107,13 @@ def _forecast_ewm(train: pd.Series, horizon: int, alpha: float = 0.2) -> pd.Seri
     return pd.Series([val] * horizon)
 
 
-def evaluate_methods(s: pd.Series, horizon: int = 7) -> Dict:
-    train, test = _split_train_test(s, test_size=min(14, len(s)//4))
+def evaluate_methods(s: pd.Series, horizon: int = 7, method: str | None = None) -> Dict:
+    """Evaluate available forecasting methods and optionally force a specific method.
+
+    If `method` is provided and valid, evaluate only that method and return its metrics and forecast.
+    Otherwise select the best by MAPE (fallback RMSE) among implemented methods.
+    """
+    train, test = _split_train_test(s, test_size=min(14, len(s) // 4))
     methods = {
         'naive': _forecast_naive,
         'moving_average': _forecast_ma,
@@ -122,13 +127,21 @@ def evaluate_methods(s: pd.Series, horizon: int = 7) -> Dict:
         rmse = _rmse(test, pred_test)
         results[name] = {'mape': mape, 'rmse': rmse, 'pred_test': pred_test}
 
-    # choose best by mape, fallback to rmse
-    best = min(results.items(), key=lambda kv: (kv[1]['mape'], kv[1]['rmse']))
-    best_name = best[0]
-    best_metrics = best[1]
+    chosen_name = None
+    if method:
+        method = method.lower()
+        if method not in methods:
+            raise HTTPException(status_code=400, detail=f'Unknown method {method}')
+        chosen_name = method
+        chosen_metrics = results[method]
+    else:
+        # choose best by mape, fallback to rmse
+        best = min(results.items(), key=lambda kv: (kv[1]['mape'], kv[1]['rmse']))
+        chosen_name = best[0]
+        chosen_metrics = best[1]
 
-    # forecast future
-    future = methods[best_name](pd.concat([train, test]), horizon)
+    # forecast future using chosen method applied to full series (train+test)
+    future = methods[chosen_name](pd.concat([train, test]), horizon)
 
     last_date = s.index[-1]
     dates = pd.date_range(last_date + pd.Timedelta(days=1), periods=horizon, freq='D')
@@ -136,15 +149,15 @@ def evaluate_methods(s: pd.Series, horizon: int = 7) -> Dict:
     series = [{'date': d.strftime('%Y-%m-%d'), 'forecast': float(v)} for d, v in zip(dates, future)]
 
     return {
-        'best_method': best_name,
-        'mape': round(float(best_metrics['mape']), 4),
-        'rmse': round(float(best_metrics['rmse']), 4),
+        'best_method': chosen_name,
+        'mape': round(float(chosen_metrics['mape']), 4),
+        'rmse': round(float(chosen_metrics['rmse']), 4),
         'series': series,
     }
 
 
 @app.post('/api/upload')
-async def upload_file(file: UploadFile = File(...), horizon: int = Query(7, ge=1, le=365)):
+async def upload_file(file: UploadFile = File(...), horizon: int = Query(7, ge=1, le=365), method: str | None = Form(None)):
     """Upload CSV or XLSX file containing `date` and `price` columns."""
     try:
         contents = await file.read()
@@ -154,7 +167,7 @@ async def upload_file(file: UploadFile = File(...), horizon: int = Query(7, ge=1
             # try excel
             df = pd.read_excel(io.BytesIO(contents))
         s = _ensure_series(df)
-        res = evaluate_methods(s, horizon=horizon)
+        res = evaluate_methods(s, horizon=horizon, method=method)
         return res
     except HTTPException:
         raise
@@ -163,7 +176,7 @@ async def upload_file(file: UploadFile = File(...), horizon: int = Query(7, ge=1
 
 
 @app.get('/api/online')
-def online(source: str = Query('yahoo', regex='^(yahoo|eia|xm)$'), symbol: str = None, period: str = '1y', horizon: int = Query(7, ge=1, le=365)):
+def online(source: str = Query('yahoo', pattern='^(yahoo|eia|xm)$'), symbol: str | None = None, period: str = '1y', horizon: int = Query(7, ge=1, le=365), method: str | None = Query(None)):
     """Fetch series online from `source` (yahoo|eia|xm) and run forecasting evaluation.
 
     - yahoo: uses yfinance, default symbol `CL=F` (crude oil futures)
@@ -173,7 +186,13 @@ def online(source: str = Query('yahoo', regex='^(yahoo|eia|xm)$'), symbol: str =
     try:
         src = source.lower()
         if src == 'yahoo':
-            sym = symbol or 'CL=F'
+            # support friendly symbol names
+            if symbol and symbol.lower() == 'brent':
+                sym = 'BZ=F'
+            elif symbol and symbol.lower() == 'henry':
+                sym = 'NG=F'
+            else:
+                sym = symbol or 'CL=F'
             t = yf.Ticker(sym)
             df = t.history(period=period)
             if df.empty:
@@ -200,7 +219,7 @@ def online(source: str = Query('yahoo', regex='^(yahoo|eia|xm)$'), symbol: str =
             raise HTTPException(status_code=400, detail='Unknown source')
 
         s = _ensure_series(df)
-        res = evaluate_methods(s, horizon=horizon)
+        res = evaluate_methods(s, horizon=horizon, method=method)
         return res
     except HTTPException:
         raise

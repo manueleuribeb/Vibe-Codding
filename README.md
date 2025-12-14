@@ -44,6 +44,44 @@ python -m pip install -r backend/requirements.txt
 pytest -q backend/tests
 ```
 
+UI improvements and usage
+
+- The frontend now includes:
+	- A clean layout and CSS styles in `frontend/src/index.css`.
+	- Preset quick-buttons for WTI (CL=F), Brent (BZ=F) and Henry Hub (NG=F).
+	- A method selector (Auto/Naive/Moving average/EWMA) and a slider to choose horizon.
+	- Forecast chart using Recharts (prepared data hook in `frontend/src/hooks/useForecastData` and chart component `ForecastChart`).
+
+Evidence (quick checks)
+
+- Start backend and frontend then visit `http://localhost:5173/`.
+- Try online forecast for Brent from the UI (press "Online source" → Preset "Brent" → "Fetch & Forecast").
+- Or curl directly to the API:
+
+```bash
+curl 'http://127.0.0.1:8000/api/online?source=yahoo&symbol=BZ=F&period=1mo'
+```
+
+Example output snippet:
+
+```json
+{
+	"best_method": "moving_average",
+	"mape": 1.72,
+	"rmse": 1.13,
+	"series": [{"date":"2025-12-13","forecast":58.62}, ...]
+}
+```
+
+Notes on EIA
+
+- If using `source=eia`, ensure `EIA_API_KEY` is set; you can get one at https://www.eia.gov/opendata/register.php.
+- Example EIA call (replace `PET.RWTC.D` with another series id if needed):
+
+```bash
+curl "http://127.0.0.1:8000/api/online?source=eia&symbol=PET.RWTC.D"
+```
+
 API endpoints (backend)
 
 - `POST /api/upload` — multipart form upload `file` (CSV or XLSX) with columns `date` and `price`. Optional query `horizon` (days forecast, default 7). Returns JSON with `best_method`, `mape`, `rmse`, and `series` (future dates and forecasts).
