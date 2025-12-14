@@ -1,0 +1,9 @@
+{
+  "name": "energia-forecast",
+  "private": true,
+  "scripts": {
+    "start-backend": "uvicorn backend.main:app --reload",
+    "dev": "npm --prefix frontend run dev",
+    "dev-frontend": "npm --prefix frontend run dev"
+  }
+}
