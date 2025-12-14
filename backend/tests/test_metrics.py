@@ -1,5 +1,11 @@
 import math
 import pandas as pd
+import sys
+import pathlib
+
+# ensure project root is on sys.path so `backend` package can be imported when running pytest
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
+
 from backend.main import _mape, _rmse, evaluate_methods
 
 
