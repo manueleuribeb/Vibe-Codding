@@ -7,6 +7,45 @@ Built with Vibe Codding — this demo was assembled using the Vibe Codding scaff
 Quick start
 
 - Backend: `cd backend` && `pip install -r requirements.txt` && `uvicorn backend.main:app --reload`
+
+Notes on starting the backend (avoid `ModuleNotFoundError`):
+
+- Recommended (from project root):
+
+```bash
+python start-backend.py
+# or
+npm run start-backend
+```
+
+- If you prefer to run from inside the `backend/` directory use the helper script:
+
+```bash
+cd backend
+./run_uvicorn.sh
+```
+
+This script sets `PYTHONPATH` to the repository root so Python can import the `backend` package regardless of your working directory.
+- Backend: `cd backend` && `pip install -r requirements.txt` && `uvicorn backend.main:app --reload`
+
+Note on `ModuleNotFoundError: No module named 'backend'`
+
+- If you see `ModuleNotFoundError: No module named 'backend'` when running `uvicorn` or Python, it means the Python process cannot find the repository root on `PYTHONPATH`.
+- Solutions:
+	- Run the server from the project root (recommended):
+
+		```bash
+		python start-backend.py
+		```
+
+	- Or set `PYTHONPATH` to the repository root before running `uvicorn`:
+
+		```bash
+		export PYTHONPATH="$PWD"
+		uvicorn backend.main:app --reload
+		```
+
+	- If you prefer, use `python -m backend.main` from the project root.
 - Frontend: `cd frontend` && `npm install` && `npm run dev`
 
 From the project root you can run the backend with `npm run start-backend` or start the frontend with `npm run dev-frontend`.
@@ -116,6 +155,7 @@ echo "EIA_API_KEY=your_api_key_here" > .env
 ```
 
 - In Codespaces or other cloud dev environments, add the secret (name `EIA_API_KEY`) and rebuild/restart the container so the key is injected into the environment.
+- After adding a Codespaces secret you must rebuild/restart the Codespace to inject the new secret into the running container. In the GitHub Codespaces UI: `Codespaces -> (your codespace) -> More -> Rebuild container` or stop/start the Codespace.
 - You can also check quickly from the running backend whether a key is available with:
 
 ```bash

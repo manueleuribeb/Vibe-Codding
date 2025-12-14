@@ -50,7 +50,13 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
   }
 
   useEffect(() => {
-    if (source === 'eia') checkEiaStatus()
+    let timer: number | undefined
+    if (source === 'eia') {
+      checkEiaStatus()
+      // poll until present - helpful after Codespaces rebuild
+      timer = window.setInterval(checkEiaStatus, 5000)
+    }
+    return () => { if (timer) clearInterval(timer) }
   }, [source])
 
   return (
@@ -101,7 +107,7 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
         <button type="submit" disabled={loading || eiaPresent === false}>{loading ? 'Loading...' : 'Fetch & Forecast'}</button>
         {source === 'eia' && eiaPresent === false && (
           <div style={{ marginTop: 8 }}>
-            <div className="error-message">Error: EIA API key missing in backend environment. Add `EIA_API_KEY` to your environment or Codespaces secrets and restart the container.</div>
+            <div className="error-message">Error: EIA API key missing in backend environment. Add <code>EIA_API_KEY</code> to your environment or Codespaces secrets and restart the container. See <a href="https://github.com/manueleuribeb/Vibe-Codding#notes-on-eia" target="_blank" rel="noreferrer">README</a> for instructions.</div>
             <button type="button" onClick={checkEiaStatus} style={{ marginTop: 8 }}>Check again</button>
           </div>
         )}

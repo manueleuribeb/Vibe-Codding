@@ -23,6 +23,14 @@ app.add_middleware(
 )
 
 
+@app.on_event('startup')
+def _startup_checks():
+    # Log whether the EIA key is present (do not log the key itself)
+    key_present = bool(os.getenv('EIA_API_KEY') or os.getenv('EIA_TOKEN'))
+    import logging
+    logging.getLogger('uvicorn.info').info(f'EIA key present: {key_present}')
+
+
 @app.get("/api/price")
 def get_price(ticker: str = "AAPL", period: str = "5d"):
     """Return the last close price for `ticker` using yfinance."""
