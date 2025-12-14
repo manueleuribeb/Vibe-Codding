@@ -1,7 +1,19 @@
+"""API backend para Energia Forecast.
+
+Este módulo expone endpoints para obtener series de precios desde Yahoo o EIA,
+aceptar uploads de CSV/XLSX con columnas `date` y `price`, evaluar métodos de
+forecasting simples (naive, moving_average, ewm) y devolver métricas y una
+serie de pronóstico para los siguientes `horizon` días.
+
+Notas:
+- Carga variables de entorno desde `.env` en desarrollo (usa `python-dotenv`).
+- Para usar EIA, defina `EIA_API_KEY` en el entorno o en Codespaces secrets.
+"""
+
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Form
 from dotenv import load_dotenv
 
-# Load environment variables from .env (if present) for development convenience
+# Cargar variables de entorno desde .env (conveniencia en desarrollo)
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 import yfinance as yf
@@ -33,7 +45,14 @@ def _startup_checks():
 
 @app.get("/api/price")
 def get_price(ticker: str = "AAPL", period: str = "5d"):
-    """Return the last close price for `ticker` using yfinance."""
+    """Devuelve el último precio de cierre para un `ticker` usando `yfinance`.
+
+    Parámetros:
+    - `ticker`: símbolo a consultar (ej. `AAPL`, `CL=F`).
+    - `period`: periodo aceptado por yfinance (ej. `5d`, `1y`).
+
+    Respuesta JSON: `{"ticker": <TICKER>, "close": <float>}` o HTTP 404/500 en errores.
+    """
     try:
         t = yf.Ticker(ticker)
         df = t.history(period=period)
@@ -48,6 +67,12 @@ def get_price(ticker: str = "AAPL", period: str = "5d"):
 
 
 def _ensure_series(df: pd.DataFrame) -> pd.Series:
+    """Normaliza un `DataFrame` entrante y devuelve una `Series` indexada por fecha.
+
+    El `DataFrame` debe contener una columna `date` y `price` (o `close`). Se
+    convierten los tipos y se ordenan por fecha. Lanza `HTTPException(400)` si
+    no hay datos válidos.
+    """
     # Accept 'price' or 'close' column names
     lower_cols = {c.lower(): c for c in df.columns}
     if 'date' in lower_cols:
@@ -69,6 +94,11 @@ def _ensure_series(df: pd.DataFrame) -> pd.Series:
 
 
 def _split_train_test(s: pd.Series, test_size: int = 14) -> Tuple[pd.Series, pd.Series]:
+    """Divide la serie en train/test para evaluación.
+
+    Usa `test_size` pero ajusta para que el tamaño mínimo sea razonable. Lanza
+    `HTTPException(400)` si no hay suficientes puntos.
+    """
     if len(s) < 8:
         raise HTTPException(status_code=400, detail="Not enough data points; need at least 8")
     test_size = min(test_size, max(1, len(s) // 4))
@@ -104,17 +134,22 @@ def _rmse(y_true: pd.Series, y_pred: pd.Series) -> float:
 
 
 def _forecast_naive(train: pd.Series, horizon: int) -> pd.Series:
+    """Pronóstico naive: repite el último valor observado para el `horizon`."""
     last = float(train.iloc[-1])
     return pd.Series([last] * horizon)
 
 
 def _forecast_ma(train: pd.Series, horizon: int, window: int = 7) -> pd.Series:
+    """Promedio móvil simple: calcula la media de las últimas `window` observaciones
+    y la repite `horizon` veces."""
     window = min(window, len(train))
     val = float(train.iloc[-window:].mean())
     return pd.Series([val] * horizon)
 
 
 def _forecast_ewm(train: pd.Series, horizon: int, alpha: float = 0.2) -> pd.Series:
+    """Promedio exponencialmente ponderado (EWMA) aplicado a la serie de entrenamiento
+    y repetición del último valor calculado."""
     s = train.ewm(alpha=alpha).mean()
     val = float(s.iloc[-1])
     return pd.Series([val] * horizon)
@@ -125,6 +160,14 @@ def evaluate_methods(s: pd.Series, horizon: int = 7, method: str | None = None) 
 
     If `method` is provided and valid, evaluate only that method and return its metrics and forecast.
     Otherwise select the best by MAPE (fallback RMSE) among implemented methods.
+    """
+    """Evalúa métodos disponibles y retorna métricas y pronóstico futuro.
+
+    Si `method` es especificado, se evalúa solo ese método (y se devuelve su
+    pronóstico). Si no, se selecciona el mejor por MAPE (con RMSE como tie-breaker).
+
+    Retorna diccionario con `best_method`, `mape`, `rmse` y `series` (lista de
+    objetos `{date, forecast}`).
     """
     train, test = _split_train_test(s, test_size=min(14, len(s) // 4))
     methods = {

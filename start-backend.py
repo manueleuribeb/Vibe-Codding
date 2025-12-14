@@ -1,10 +1,9 @@
-"""Helper entrypoint to run the backend with the project root on PYTHONPATH.
+"""Punto de entrada para arrancar el backend con la raíz del repo en PYTHONPATH.
 
-Usage:
-  python start-backend.py
+Uso recomendado: `python start-backend.py` desde la raíz del repositorio.
 
-This imports `backend` reliably even if your current working directory doesn't
-automatically put the repository root on `sys.path`.
+Esto asegura que el paquete `backend` sea importable aunque el working
+directory no esté en `PYTHONPATH` (evita `ModuleNotFoundError`).
 """
 import sys
 import pathlib

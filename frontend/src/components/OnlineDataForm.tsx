@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react'
 
+/**
+ * Componente `OnlineDataForm`.
+ *
+ * Muestra controles para elegir la fuente (`yahoo`, `eia`, `xm`), presets y
+ * parámetros del forecast. Consulta `/api/eia_status` cuando se selecciona
+ * `eia` para comprobar si la clave está disponible y evita el envío si falta.
+ */
+
 type Result = any
 
 export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => void }) {

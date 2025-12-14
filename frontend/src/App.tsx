@@ -1,4 +1,10 @@
 import React, { useState } from 'react'
+
+/**
+ * Aplicación principal `App` — componente superior que alterna entre el
+ * formulario de upload y el formulario de fuentes online, y presenta resultados
+ * y la visualización del forecast.
+ */
 import UploadData from './components/UploadData'
 import OnlineDataForm from './components/OnlineDataForm'
 import ForecastChart from './components/ForecastChart'

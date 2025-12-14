@@ -1,6 +1,14 @@
+"""Cargadores de datos para distintas fuentes.
+
+Contiene helpers para descargar series desde Yahoo (`yfinance`) y desde la
+API de la EIA (v2). Las funciones devuelven `DataFrame` con columnas `date` y
+`price` ya convertidas y ordenadas.
+"""
+
 import os, pandas as pd, numpy as np, requests, yfinance as yf
 from typing import Optional
 
+# Soporta `EIA_API_KEY` como nombre de variable en entorno (o `EIA_TOKEN`)
 EIA_DEFAULT_TOKEN = os.getenv("EIA_API_KEY") or os.getenv("EIA_TOKEN", "")
 
 EIA_SERIES = {
@@ -10,12 +18,23 @@ EIA_SERIES = {
 }
 
 def load_from_yahoo(symbol: str, start: Optional[str], end: Optional[str], interval: str="1d") -> pd.DataFrame:
+    """Descarga una serie desde Yahoo (usando `yfinance`) y devuelve
+    `DataFrame(date, price)`.
+
+    Parámetros: `symbol` (ej. `CL=F`), `start`, `end` (fechas opcionales) y `interval`.
+    """
     df = yf.download(symbol, start=start, end=end, interval=interval)
     df = df.rename(columns={"Close":"price"}).reset_index()[["Date","price"]]
     df.columns = ["date","price"]
     return df
 
 def load_from_eia(series_id: str, token: Optional[str] = None) -> pd.DataFrame:
+    """Carga datos desde la API v2 de EIA para `series_id`.
+
+    Requiere `token` (o la variable de entorno `EIA_API_KEY`). Devuelve un
+    `DataFrame` con `date` (convertida a datetime) y `price` (numérico). Lanza
+    `ValueError` si la respuesta no contiene datos.
+    """
     token = token or EIA_DEFAULT_TOKEN
     if not (series_id and token):
         raise ValueError("series_id y token EIA son requeridos (o EIA_TOKEN en entorno).")
@@ -26,7 +45,7 @@ def load_from_eia(series_id: str, token: Optional[str] = None) -> pd.DataFrame:
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:
-        # include response content if available
+        # include response content if available para depuración
         txt = ''
         try:
             txt = resp.json()
@@ -35,9 +54,10 @@ def load_from_eia(series_id: str, token: Optional[str] = None) -> pd.DataFrame:
         raise requests.HTTPError(f"EIA HTTP error: {e} - {txt}")
 
     js = resp.json()
+    # La API v2 suele incluir `response.data`; soportamos también otras formas
     rows = js.get('response', {}).get('data', []) or js.get('data') or js.get('series')
     if not rows:
-        # try to include any error/message field from EIA response
+        # intentar incluir cualquier mensaje de error que vuelva EIA
         err_msg = js.get('error') or js.get('message') or js
         raise ValueError(f"No data returned from EIA for series_id: {err_msg}")
     df = pd.DataFrame(rows)

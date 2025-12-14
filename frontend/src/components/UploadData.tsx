@@ -1,5 +1,13 @@
 import React, { useState } from 'react'
 
+/**
+ * Componente `UploadData`.
+ *
+ * Permite subir un archivo CSV o XLSX con columnas `date` y `price`. Envía el
+ * archivo al endpoint `/api/upload` y pasa el resultado (o error) al
+ * callback `onResult`.
+ */
+
 type Result = any
 
 export default function UploadData({ onResult }: { onResult: (r: Result) => void }) {

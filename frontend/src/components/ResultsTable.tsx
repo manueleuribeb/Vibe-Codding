@@ -1,5 +1,12 @@
 import React from 'react'
 
+/**
+ * `ResultsTable` presenta de forma legible los resultados del forecast.
+ * - Si `result.error` o `result.detail` está presente muestra un mensaje
+ *   de error.
+ * - Muestra una tabla resumen con `best_method`, `mape` y `rmse` y otra tabla
+ *   con la serie de pronóstico (`date`, `value`).
+ */
 export default function ResultsTable({ result }: { result: any }) {
   if (!result) return <div>No result yet</div>
   if (result.error || result.detail) {

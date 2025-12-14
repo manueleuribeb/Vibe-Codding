@@ -108,6 +108,16 @@ UI improvements and usage
 
 	- Error handling: when online sources (for example EIA) return errors or incomplete data, the UI shows a clear error message in the results panel.
 
+	Documentación del código
+
+	- Se han añadido docstrings y comentarios en español en los siguientes archivos:
+		- `backend/main.py`: descripción de endpoints y funciones de forecasting.
+		- `backend/data_sources.py`: carga y normalización de series desde Yahoo y EIA.
+		- `start-backend.py`, `scripts/check_env.py`, `backend/run_uvicorn.sh`: helpers y diagnósticos.
+		- Frontend: `src/components/UploadData.tsx`, `OnlineDataForm.tsx`, `ResultsTable.tsx`, `ForecastChart.tsx` y `src/hooks/useForecastData.ts` con descripciones de props y comportamiento.
+
+	Estos comentarios facilitan la lectura del código y la extensión del proyecto.
+
 Evidence (quick checks)
 
 - Start backend and frontend then visit `http://localhost:5173/`.

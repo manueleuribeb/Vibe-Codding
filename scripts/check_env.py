@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Simple diagnostic to check whether Python can import the `backend` package.
+"""Diagnóstico simple para comprobar si Python encuentra el paquete `backend`.
 
-Usage: `python scripts/check_env.py`
+Uso: `python scripts/check_env.py` desde la raíz del repositorio. El script
+proporciona sugerencias en español si falta el paquete en `PYTHONPATH`.
 """
 import sys
 import os

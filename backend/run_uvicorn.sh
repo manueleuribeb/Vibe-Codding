@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Run this script from the `backend/` directory to start uvicorn with the
-# repository root added to PYTHONPATH so `backend` can be imported reliably.
+# Ejecuta este script desde el directorio `backend/` para arrancar uvicorn.
+# El script delega en `start-backend.py` que se asegura de que la raíz del
+# repositorio esté en `PYTHONPATH`, evitando `ModuleNotFoundError`.
 
 set -euo pipefail
 
