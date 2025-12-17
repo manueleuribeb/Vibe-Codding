@@ -4,9 +4,87 @@ Energia Forecast — monorepo with a FastAPI backend and Vite + React + TypeScri
 
 Built with Vibe Codding — this demo was assembled using the Vibe Codding scaffold and development workflow.
 
-Quick start
+## Inicio rápido (comandos y orden recomendados) ✅
 
-- Backend: `cd backend` && `pip install -r requirements.txt` && `uvicorn backend.main:app --reload`
+Sigue estos pasos desde la raíz del repositorio para instalar, arrancar y verificar la aplicación sin errores comunes (p. ej. `ModuleNotFoundError`):
+
+1) Instalar dependencias backend (Python)
+
+```bash
+python -m pip install -r backend/requirements.txt
+# (recomendado: crear y activar un virtualenv antes si trabajas localmente)
+```
+
+2) (Opcional) Proveer API key de EIA si vas a usar `source=eia`
+
+```bash
+# Opción A: export para la sesión actual
+export EIA_API_KEY="your_api_key_here"
+
+# Opción B: archivo .env (desarrollo)
+echo "EIA_API_KEY=your_api_key_here" > .env
+```
+
+3) Arrancar el backend (desde la raíz — evita `ModuleNotFoundError`)
+
+```bash
+python start-backend.py
+```
+
+- Para arrancar en background:
+
+```bash
+nohup python start-backend.py > backend.log 2>&1 & echo $!
+```
+
+- Si prefieres iniciar desde dentro de `backend/` usa el helper (pone PYTHONPATH correctamente):
+
+```bash
+cd backend
+./run_uvicorn.sh
+```
+
+4) Instalar y arrancar frontend (Node/Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- Para arrancar Vite en background:
+
+```bash
+cd frontend
+nohup npm run dev > ../frontend.log 2>&1 & echo $!
+```
+
+5) Verificar rápidamente que todo está OK
+
+```bash
+# ¿Está la clave EIA disponible?
+curl -sS http://127.0.0.1:8000/api/eia_status
+
+# Forecast demo (Yahoo, 1 mes)
+curl -sS "http://127.0.0.1:8000/api/online?source=yahoo&period=1mo"
+
+# Forecast demo (EIA series)
+curl -sS "http://127.0.0.1:8000/api/online?source=eia&symbol=PET.RWTC.D"
+```
+
+6) Tests (backend)
+
+```bash
+python -m pytest backend/tests
+```
+
+Notas rápidas
+
+- Si ves `ModuleNotFoundError: No module named 'backend'` al usar `uvicorn`, arranca desde la raíz con `python start-backend.py` o exporta `PYTHONPATH="$PWD"` antes de `uvicorn`.
+- En Codespaces: después de añadir el secret `EIA_API_KEY` **reconstruye/reinicia** el Codespace para que se inyecte el secreto en el contenedor.
+- Backend escucha en `http://127.0.0.1:8000` por defecto; frontend en `http://localhost:5173/`.
+
+---
 
 Notes on starting the backend (avoid `ModuleNotFoundError`):
 

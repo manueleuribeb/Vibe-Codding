@@ -38,6 +38,9 @@ def load_from_eia(series_id: str, token: Optional[str] = None) -> pd.DataFrame:
     token = token or EIA_DEFAULT_TOKEN
     if not (series_id and token):
         raise ValueError("series_id y token EIA son requeridos (o EIA_TOKEN en entorno).")
+    # Detect common user mistakes: passing a Yahoo ticker (eg 'CL=F') to the EIA loader
+    if '=' in series_id:
+        raise ValueError(f"Invalid series_id: looks like a ticker '{series_id}'. EIA expects a series id like 'PET.RWTC.D'.")
     # API v1 series endpoint
     # Use EIA API v2 seriesid endpoint (backwards-compatible)
     url = f"https://api.eia.gov/v2/seriesid/{series_id}"

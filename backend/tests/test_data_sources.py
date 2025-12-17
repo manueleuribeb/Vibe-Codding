@@ -45,3 +45,10 @@ def test_load_from_eia_http_error(monkeypatch):
     monkeypatch.setattr('requests.get', lambda *a, **k: DummyResp(js=js, status_ok=False, text='invalid'))
     with pytest.raises(requests.HTTPError):
         load_from_eia('PET.RWTC.D', token='KEY')
+
+
+def test_load_from_eia_rejects_ticker_format(monkeypatch):
+    # Ensure obvious ticker-like inputs are rejected early
+    with pytest.raises(ValueError) as e:
+        load_from_eia('CL=F', token='KEY')
+    assert 'Invalid series_id' in str(e.value)
