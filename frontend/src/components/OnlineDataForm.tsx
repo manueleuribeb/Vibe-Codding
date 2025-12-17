@@ -99,7 +99,9 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
 
       <div style={{ marginTop: 8 }}>
         <label>
-          Symbol/Series (optional): <input value={symbol} onChange={(e) => { setSymbol(e.target.value); setPreset('') }} placeholder={source === 'eia' ? 'PET.RWTC.D (EIA series id)' : 'CL=F or PET.RWTC.D'} />        {source === 'eia' && symbol && symbol.includes('=') && (
+          Symbol/Series (optional): <input value={symbol} onChange={(e) => { setSymbol(e.target.value); setPreset('') }} placeholder={source === 'eia' ? 'PET.RWTC.D (EIA series id)' : 'CL=F or PET.RWTC.D'} />
+        </label>
+        {source === 'eia' && symbol && symbol.includes('=') && (
           <div style={{ marginTop: 8, color: '#b03030' }}>
             <div>El símbolo parece un ticker de Yahoo (p. ej. <code>CL=F</code>). Para EIA usa un series id (p. ej. <code>PET.RWTC.D</code>), o cambia la fuente a <strong>yahoo</strong>.</div>
             {(() => {
@@ -111,6 +113,7 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
             })()}
           </div>
         )}
+      </div>
       <div style={{ marginTop: 8 }}>
         <label>
           Method:{' '}
