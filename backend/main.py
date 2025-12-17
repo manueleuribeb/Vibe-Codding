@@ -256,12 +256,20 @@ def online(source: str = Query('yahoo', pattern='^(yahoo|eia|xm)$'), symbol: str
             df = df.reset_index()[['Date', 'Close']].rename(columns={'Date': 'date', 'Close': 'price'})
         elif src == 'eia':
             series_id = symbol or 'PET.RWTC.D'
+            # Quick validation: frequently users pass tickers like 'CL=F' by mistake.
+            if series_id and '=' in series_id:
+                raise HTTPException(status_code=400, detail=(
+                    "Invalid series id for EIA: it looks like a Yahoo ticker (e.g. 'CL=F'). "
+                    "EIA expects series ids like 'PET.RWTC.D'. Use source=yahoo for tickers or provide a valid EIA series id."))
             api_key = os.getenv('EIA_API_KEY') or os.getenv('EIA_TOKEN')
             try:
                 df = load_from_eia(series_id, token=api_key)
             except ValueError as e:
-                # data missing or unexpected format
-                raise HTTPException(status_code=404, detail=str(e))
+                # Distinguish between invalid input and missing data
+                msg = str(e)
+                if msg.lower().startswith('invalid series_id'):
+                    raise HTTPException(status_code=400, detail=msg)
+                raise HTTPException(status_code=404, detail=msg)
             except requests.HTTPError as e:
                 raise HTTPException(status_code=502, detail=str(e))
             except Exception as e:

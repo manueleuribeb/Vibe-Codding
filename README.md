@@ -4,9 +4,203 @@ Energia Forecast — monorepo with a FastAPI backend and Vite + React + TypeScri
 
 Built with Vibe Codding — this demo was assembled using the Vibe Codding scaffold and development workflow.
 
-Quick start
+## Inicio rápido (comandos y orden recomendados) ✅
 
-- Backend: `cd backend` && `pip install -r requirements.txt` && `uvicorn backend.main:app --reload`
+Sigue estos pasos desde la raíz del repositorio para instalar, arrancar y verificar la aplicación sin errores comunes (p. ej. `ModuleNotFoundError`):
+
+1) Instalar dependencias backend (Python)
+
+```bash
+python -m pip install -r backend/requirements.txt
+# (recomendado: crear y activar un virtualenv antes si trabajas localmente)
+```
+
+2) (Opcional) Proveer API key de EIA si vas a usar `source=eia`
+
+```bash
+# Opción A: export para la sesión actual
+export EIA_API_KEY="your_api_key_here"
+
+# Opción B: archivo .env (desarrollo)
+echo "EIA_API_KEY=your_api_key_here" > .env
+```
+
+3) Arrancar el backend (desde la raíz — evita `ModuleNotFoundError`)
+
+```bash
+python start-backend.py
+```
+
+- Para arrancar en background:
+
+```bash
+nohup python start-backend.py > backend.log 2>&1 & echo $!
+```
+
+- Si prefieres iniciar desde dentro de `backend/` usa el helper (pone PYTHONPATH correctamente):
+
+```bash
+cd backend
+./run_uvicorn.sh
+```
+
+4) Instalar y arrancar frontend (Node/Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- Para arrancar Vite en background:
+
+```bash
+cd frontend
+nohup npm run dev > ../frontend.log 2>&1 & echo $!
+```
+
+5) Verificar rápidamente que todo está OK
+
+```bash
+# ¿Está la clave EIA disponible?
+curl -sS http://127.0.0.1:8000/api/eia_status
+
+# Forecast demo (Yahoo, 1 mes)
+curl -sS "http://127.0.0.1:8000/api/online?source=yahoo&period=1mo"
+
+# Forecast demo (EIA series)
+curl -sS "http://127.0.0.1:8000/api/online?source=eia&symbol=PET.RWTC.D"
+```
+
+6) Tests (backend)
+
+```bash
+python -m pytest backend/tests
+```
+
+Notas rápidas
+
+- Si ves `ModuleNotFoundError: No module named 'backend'` al usar `uvicorn`, arranca desde la raíz con `python start-backend.py` o exporta `PYTHONPATH="$PWD"` antes de `uvicorn`.
+- En Codespaces: después de añadir el secret `EIA_API_KEY` **reconstruye/reinicia** el Codespace para que se inyecte el secreto en el contenedor.
+- Backend escucha en `http://127.0.0.1:8000` por defecto; frontend en `http://localhost:5173/`.
+
+---
+
+## Comandos para ejecutar (orden y ejemplos)
+
+Sigue este orden desde la raíz del proyecto. Todos los comandos asumen que estás en la raíz del repositorio (evita `ModuleNotFoundError`).
+
+1) Instalar dependencias
+
+```bash
+# Backend (Python)
+python -m pip install -r backend/requirements.txt
+
+# Frontend (Node)
+cd frontend
+npm install
+```
+
+2) Proveer (opcional) la API key de EIA si usarás `source=eia`
+
+```bash
+# Opción A: para la sesión actual
+export EIA_API_KEY="your_api_key_here"
+
+# Opción B: archivo .env (desarrollo)
+echo "EIA_API_KEY=your_api_key_here" > .env
+```
+
+3) Arrancar backend (recomendado)
+
+```bash
+# Desde la raíz del proyecto (evita ModuleNotFoundError)
+python start-backend.py
+
+# En background (salida a backend.log):
+nohup python start-backend.py > backend.log 2>&1 & echo $!
+```
+
+- Alternativa desde dentro de `backend/` (helper que ajusta PYTHONPATH):
+
+```bash
+cd backend
+./run_uvicorn.sh
+```
+
+4) Arrancar frontend (Vite)
+
+```bash
+cd frontend
+npm run dev
+
+# Opcional en background (salida a frontend.log):
+nohup npm run dev > ../frontend.log 2>&1 & echo $!
+```
+
+5) Verificaciones / debug rápidas
+
+```bash
+# Comprobar EIA key desde backend
+curl -sS http://127.0.0.1:8000/api/eia_status
+
+# Obtener forecast (Yahoo ejemplo)
+curl -sS "http://127.0.0.1:8000/api/online?source=yahoo&period=1mo"
+
+# Obtener forecast (EIA ejemplo)
+curl -sS "http://127.0.0.1:8000/api/online?source=eia&symbol=PET.RWTC.D"
+
+# Subir un CSV (multipart)
+curl -sS -F "file=@/ruta/mi.csv" -F "horizon=7" http://127.0.0.1:8000/api/upload
+```
+
+6) Parar servicios (ejemplos)
+
+```bash
+# Parar backend
+ps aux | grep start-backend.py | grep -v grep
+kill <PID>
+
+# Parar frontend (Vite)
+ps aux | grep vite | grep -v grep
+kill <PID>
+```
+
+7) Ejecutar tests (backend)
+
+```bash
+python -m pytest -q
+```
+
+**Notas rápidas:**
+- No hagas `cd backend` y luego `uvicorn backend.main:app` a menos que ajustes `PYTHONPATH` (usa `python start-backend.py` o `./run_uvicorn.sh`).
+- En Codespaces: tras añadir el secret `EIA_API_KEY` **reconstruye/reinicia** el Codespace para que se inyecte la variable.
+
+---
+
+## Glosario / Diccionario (abreviaturas y conceptos)
+
+- **EIA**: U.S. Energy Information Administration — fuente oficial de datos de energía. Se accede vía su API (requiere `EIA_API_KEY`).
+- **Series id (EIA)**: Identificador usado por la API EIA (ej. `PET.RWTC.D` para precios WTI diarios). No confundir con tickers de Yahoo.
+- **Ticker (Yahoo)**: Símbolo usado por `yfinance` (ej. `CL=F` para WTI futures, `BZ=F` para Brent). Se usan con `source=yahoo`.
+- **WTI / Brent / Henry Hub**: nombres de mercados/índices: WTI (West Texas Intermediate), Brent (referencia europea), Henry Hub (gas natural, EEUU).
+- **MAPE** (Mean Absolute Percentage Error): error medio porcentual absoluto; métrica que expresa el error medio en porcentaje.
+- **RMSE** (Root Mean Squared Error): raíz del error cuadrático medio; penaliza más los errores grandes.
+- **Horizon**: horizonte del pronóstico en días (número de días futuros que la app estima).
+- **Naive**: método de forecasting que repite el último valor observado para todos los pasos futuros.
+- **Moving average (MA)**: pronóstico basado en la media simple de las últimas observaciones (ventana móvil).
+- **EWMA / EWM**: promedio exponencialmente ponderado — da más peso a observaciones recientes.
+- **Train/Test split**: división de la serie histórica en parte para entrenar (train) y parte para evaluar (test).
+- **Best method**: método seleccionado por la menor MAPE; si hay empate se usa RMSE como tie-breaker.
+- **Forecast series**: lista de pares `{date, forecast}` con los valores previstos para el horizonte especificado.
+
+**Errores comunes**
+- Pasar un ticker de Yahoo (ej. `CL=F`) cuando `source=eia` da un error. Usa `source=yahoo` para tickers o selecciona la serie EIA correcta (presets o `PET.RWTC.D`).
+- `EIA_API_KEY` no presente → la UI mostrará un mensaje y el backend retornará estado `eia_key_present: false`.
+- `ModuleNotFoundError: No module named 'backend'` → inicia el backend con `python start-backend.py` desde la raíz o ajusta `PYTHONPATH`.
+
+---
+
 
 Notes on starting the backend (avoid `ModuleNotFoundError`):
 

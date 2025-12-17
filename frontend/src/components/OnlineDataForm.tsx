@@ -27,13 +27,22 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
       setLoading(false)
       return
     }
+
+    // client-side validation: avoid sending yahoo tickers to EIA
+    const looksLikeTicker = (s: string) => s && s.includes('=')
+    if (source === 'eia' && symbol && looksLikeTicker(symbol)) {
+      onResult({ error: `El símbolo '${symbol}' parece un ticker (ej. CL=F). Para EIA usa un series id (ej. PET.RWTC.D) o cambia Source a 'yahoo'.` })
+      setLoading(false)
+      return
+    }
+
     const params = new URLSearchParams()
     params.set('source', source)
     // apply preset if selected
     if (preset) {
-      if (preset === 'wti') params.set('symbol', 'CL=F')
-      if (preset === 'brent') params.set('symbol', 'BZ=F')
-      if (preset === 'henry') params.set('symbol', 'NG=F')
+      if (preset === 'wti') params.set('symbol', source === 'eia' ? 'PET.RWTC.D' : 'CL=F')
+      if (preset === 'brent') params.set('symbol', source === 'eia' ? 'PET.RBRTE.D' : 'BZ=F')
+      if (preset === 'henry') params.set('symbol', source === 'eia' ? 'NG.RNGWHHD.M' : 'NG=F')
     } else if (symbol) params.set('symbol', symbol)
     if (method !== 'auto') params.set('method', method)
     params.set('horizon', String(horizon))
@@ -82,18 +91,29 @@ export default function OnlineDataForm({ onResult }: { onResult: (r: Result) => 
 
       <div style={{ marginTop: 8 }}>
         <label style={{ marginRight: 8 }}>Presets:</label>
-        <button type="button" onClick={() => { setPreset('wti'); setSymbol('CL=F') }} style={{ marginRight: 6 }}>WTI (CL=F)</button>
-        <button type="button" onClick={() => { setPreset('brent'); setSymbol('BZ=F') }} style={{ marginRight: 6 }}>Brent</button>
-        <button type="button" onClick={() => { setPreset('henry'); setSymbol('NG=F') }} style={{ marginRight: 6 }}>Henry Hub</button>
+        <button type="button" onClick={() => { setPreset('wti'); setSymbol(source === 'eia' ? 'PET.RWTC.D' : 'CL=F') }} style={{ marginRight: 6 }}>WTI ({source === 'eia' ? 'PET.RWTC.D' : 'CL=F'})</button>
+        <button type="button" onClick={() => { setPreset('brent'); setSymbol(source === 'eia' ? 'PET.RBRTE.D' : 'BZ=F') }} style={{ marginRight: 6 }}>Brent ({source === 'eia' ? 'PET.RBRTE.D' : 'BZ=F'})</button>
+        <button type="button" onClick={() => { setPreset('henry'); setSymbol(source === 'eia' ? 'NG.RNGWHHD.M' : 'NG=F') }} style={{ marginRight: 6 }}>Henry Hub ({source === 'eia' ? 'NG.RNGWHHD.M' : 'NG=F'})</button>
         <button type="button" onClick={() => { setPreset(''); setSymbol('') }}>Clear</button>
       </div>
 
       <div style={{ marginTop: 8 }}>
         <label>
-          Symbol/Series (optional): <input value={symbol} onChange={(e) => { setSymbol(e.target.value); setPreset('') }} placeholder="CL=F or PET.RWTC.D" />
+          Symbol/Series (optional): <input value={symbol} onChange={(e) => { setSymbol(e.target.value); setPreset('') }} placeholder={source === 'eia' ? 'PET.RWTC.D (EIA series id)' : 'CL=F or PET.RWTC.D'} />
         </label>
+        {source === 'eia' && symbol && symbol.includes('=') && (
+          <div style={{ marginTop: 8, color: '#b03030' }}>
+            <div>El símbolo parece un ticker de Yahoo (p. ej. <code>CL=F</code>). Para EIA usa un series id (p. ej. <code>PET.RWTC.D</code>), o cambia la fuente a <strong>yahoo</strong>.</div>
+            {(() => {
+              const mapping: Record<string,string> = { 'CL=F':'PET.RWTC.D', 'BZ=F':'PET.RBRTE.D', 'NG=F':'NG.RNGWHHD.M' }
+              const mapped = mapping[(symbol as string)]
+              return mapped ? (
+                <button type="button" onClick={() => setSymbol(mapped)} style={{ marginTop: 6 }}>Convertir a {mapped}</button>
+              ) : null
+            })()}
+          </div>
+        )}
       </div>
-
       <div style={{ marginTop: 8 }}>
         <label>
           Method:{' '}
